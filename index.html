@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Board - Swapfiets Positions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .refresh-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .refresh-btn.loading {
+            background: #ff9800;
+        }
+
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .refresh-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: flex;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: flex;
+        }
+
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: flex;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-text {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .last-updated {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .job-list {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .job-item {
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .job-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 15px;
+        }
+
+        .job-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .job-company {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .job-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .apply-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .apply-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .job-details {
+                grid-template-columns: 1fr;
+            }
+
+            .job-header {
+                flex-direction: column;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚲 Job Board</h1>
+            <p class="subtitle">Find your perfect position at Swapfiets</p>
+            <div class="header-actions">
+                <span class="last-updated" id="lastUpdated">Last updated: Never</span>
+                <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+                    <span class="spinner"></span>
+                    <span id="refreshText">🔄 Refresh Jobs</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="controls">
+            <input 
+                type="text" 
+                id="searchBar" 
+                class="search-bar" 
+                placeholder="🔍 Search by job title, type, or any keyword..."
+            >
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="companyFilter">Company / Region</label>
+                    <select id="companyFilter">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="locationFilter">Location / City</label>
+                    <select id="locationFilter">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="typeFilter">Job Type</label>
+                    <select id="typeFilter">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <span class="stats-text" id="jobCount">Loading jobs...</span>
+        </div>
+
+        <div class="job-list" id="jobList">
+            <div class="no-results">
+                <h3>Loading jobs...</h3>
+                <p>Please wait while we load the job data</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Job Board © 2024 | Displaying Swapfiets opportunities</p>
+        </footer>
+    </div>
+
+    <script>
+        let allJobs = [];
+        let filteredJobs = [];
+
+        // Load CSV data from server
+        async function loadData() {
+            try {
+                const response = await fetch('/jobs');
+                if (!response.ok) {
+                    throw new Error('Failed to load jobs');
+                }
+                
+                const csvText = await response.text();
+                parseCSV(csvText);
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error loading jobs:', error);
+                showStatus('Failed to load jobs. Make sure the server is running.', 'error');
+            }
+        }
+
+        // Refresh data by calling the server endpoint
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            const btnText = document.getElementById('refreshText');
+            
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btnText.textContent = 'Refreshing...';
+            
+            showStatus('Running scraper to fetch latest jobs...', 'info');
+            
+            try {
+                const response = await fetch('/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✓ ' + result.message, 'success');
+                    // Reload the data
+                    await loadData();
+                } else {
+                    showStatus('✗ ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Refresh error:', error);
+                showStatus('✗ Failed to refresh. Make sure server.py is running!', 'error');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                btnText.textContent = '🔄 Refresh Jobs';
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Update last updated timestamp
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${now.toLocaleTimeString()}`;
+        }
+
+        // Parse CSV data
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim());
+            
+            allJobs = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                
+                if (values.length >= 8) {
+                    const job = {
+                        company: values[0],
+                        jobId: values[1],
+                        title: values[2],
+                        type: values[3],
+                        postingDate: values[4],
+                        contractType: values[5],
+                        region: values[6],
+                        applyLink: values[7]
+                    };
+                    allJobs.push(job);
+                }
+            }
+            
+            populateFilters();
+            filteredJobs = [...allJobs];
+            displayJobs();
+        }
+
+        // Parse CSV line handling quoted fields
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result;
+        }
+
+        // Populate filter dropdowns
+        function populateFilters() {
+            const companies = [...new Set(allJobs.map(j => j.region))].sort();
+            const locations = [...new Set(allJobs.map(j => extractLocation(j.title)))].filter(l => l).sort();
+            const types = [...new Set(allJobs.map(j => j.type))].sort();
+            
+            const companyFilter = document.getElementById('companyFilter');
+            companyFilter.innerHTML = '<option value="">All Companies</option>';
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companyFilter.appendChild(option);
+            });
+            
+            const locationFilter = document.getElementById('locationFilter');
+            locationFilter.innerHTML = '<option value="">All Locations</option>';
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                locationFilter.appendChild(option);
+            });
+
+            const typeFilter = document.getElementById('typeFilter');
+            typeFilter.innerHTML = '<option value="">All Types</option>';
+            types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeFilter.appendChild(option);
+            });
+        }
+
+        // Extract location from title
+        function extractLocation(title) {
+            const match = title.match(/- ([A-Za-zÀ-ÿ\s]+?)(?:\s*\(|$)/);
+            return match ? match[1].trim() : '';
+        }
+
+        // Display jobs
+        function displayJobs() {
+            const jobList = document.getElementById('jobList');
+            const jobCount = document.getElementById('jobCount');
+            
+            if (filteredJobs.length === 0) {
+                jobList.innerHTML = `
+                    <div class="no-results">
+                        <h3>No jobs found</h3>
+                        <p>Try adjusting your filters or search terms</p>
+                    </div>
+                `;
+                jobCount.textContent = 'No jobs found';
+                return;
+            }
+            
+            jobCount.textContent = `Showing ${filteredJobs.length} job${filteredJobs.length !== 1 ? 's' : ''}`;
+            
+            jobList.innerHTML = filteredJobs.map(job => {
+                const location = extractLocation(job.title);
+                
+                return `
+                    <div class="job-item">
+                        <div class="job-header">
+                            <div>
+                                <div class="job-title">${job.title}</div>
+                                <div class="job-company">${job.company} - ${job.region}</div>
+                            </div>
+                            <span class="badge">${job.type}</span>
+                        </div>
+                        
+                        <div class="job-details">
+                            <div class="detail-item">
+                                <span class="detail-label">📍 Location:</span>
+                                <span>${location || 'See job posting'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">📄 Contract:</span>
+                                <span>${job.contractType}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">📅 Posted:</span>
+                                <span>${job.postingDate}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">🆔 Job ID:</span>
+                                <span>${job.jobId}</span>
+                            </div>
+                        </div>
+                        
+                        <a href="${job.applyLink}" target="_blank" class="apply-btn">Apply Now →</a>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Filter jobs
+        function filterJobs() {
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+            const companyFilter = document.getElementById('companyFilter').value;
+            const locationFilter = document.getElementById('locationFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            
+            filteredJobs = allJobs.filter(job => {
+                const matchesSearch = !searchTerm || 
+                    job.title.toLowerCase().includes(searchTerm) ||
+                    job.type.toLowerCase().includes(searchTerm) ||
+                    job.contractType.toLowerCase().includes(searchTerm) ||
+                    job.region.toLowerCase().includes(searchTerm);
+                
+                const matchesCompany = !companyFilter || job.region === companyFilter;
+                const matchesLocation = !locationFilter || extractLocation(job.title) === locationFilter;
+                const matchesType = !typeFilter || job.type === typeFilter;
+                
+                return matchesSearch && matchesCompany && matchesLocation && matchesType;
+            });
+            
+            displayJobs();
+        }
+
+        // Event listeners
+        document.getElementById('searchBar').addEventListener('input', filterJobs);
+        document.getElementById('companyFilter').addEventListener('change', filterJobs);
+        document.getElementById('locationFilter').addEventListener('change', filterJobs);
+        document.getElementById('typeFilter').addEventListener('change', filterJobs);
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
