@@ -3,7 +3,7 @@ name: Scrape Swapfiets Jobs
 on:
   # Run every 6 hours
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */12 * * *'
   
   # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
