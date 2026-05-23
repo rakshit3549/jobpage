@@ -1,60 +1,55 @@
-name: Scrape Swapfiets Jobs
+name: 12-Hour Automated Job Scraper
 
 on:
-  # Run every 6 hours
   schedule:
+    # Runs exactly every 12 hours (00:00 and 12:00 UTC)
     - cron: '0 */12 * * *'
-  
-  # Allow manual trigger from GitHub Actions tab
-  workflow_dispatch:
-  
-  # Run on push to main (for testing)
-  push:
-    branches: [ main ]
+  workflow_dispatch: # Allows you to manually trigger the script from GitHub UI anytime
+
+permissions:
+  contents: write # Allows the automated runner to save updates back to your repository
 
 jobs:
-  scrape:
+  scrape-and-update:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install dependencies
-        run: |
-          pip install requests beautifulsoup4 lxml
-      
-      - name: Run scraper
-        run: |
-          echo "Starting scraper..."
-          python scraper.py || python swapfiets_scraper.py || python swapfiets_scraper_enhanced.py
-          echo "Scraper completed"
-      
-      - name: Check if CSV changed
-        id: check_changes
-        run: |
-          git diff --quiet scraped_jobs_list.csv || echo "changed=true" >> $GITHUB_OUTPUT
-      
-      - name: Commit and push if changed
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
+    # 1. Download a copy of your repository to the cloud runner
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Deploy an isolated Python Environment
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+
+    # 3. Install required web libraries
+    - name: Install System Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 4. Pull and configure the headless Chromium binaries required by Playwright
+    - name: Install Playwright Chromium Core
+      run: playwright install chromium
+
+    # 5. Run your pipeline to extract dynamic job sheets and generate 'scraped_jobs_list.csv'
+    - name: Execute Scraper Script
+      run: python scraper_pipeline.py
+
+    # 6. Check if changes exist, compile and commit them back into the main branch
+    - name: Commit and Push Changes
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Check if the CSV data has actual modifications before forcing a save point
+        if [ -n "$(git status --porcelain scraped_jobs_list.csv)" ]; then
           git add scraped_jobs_list.csv
-          git commit -m "🔄 Auto-update: Scraped jobs on $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          git commit -m "Automated Refresh: Syncing fresh data [Skip CI]"
           git push
-      
-      - name: Report status
-        run: |
-          if [ -f scraped_jobs_list.csv ]; then
-            echo "✅ CSV file exists"
-            echo "📊 Job count: $(wc -l < scraped_jobs_list.csv)"
-          else
-            echo "❌ CSV file not found"
-            exit 1
-          fi
+        else
+          print "No fresh changes identified since last cycle."
+        fi
