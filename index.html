@@ -42,6 +42,30 @@
             font-size: 1em;
         }
 
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .status-message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: flex;
+        }
+
         .controls {
             background: white;
             border-radius: 12px;
@@ -115,6 +139,18 @@
             color: #667eea;
             font-weight: 600;
             font-size: 1.1em;
+        }
+
+        .last-updated {
+            color: #2e7d32;
+            background-color: #e8f5e9;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .job-list {
@@ -241,6 +277,18 @@
             .job-header {
                 flex-direction: column;
             }
+
+            .header-actions {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -249,7 +297,12 @@
         <header>
             <h1>🚲 Job Board</h1>
             <p class="subtitle">Find your perfect position at Swapfiets</p>
+            <div class="header-actions">
+                <span class="last-updated" id="lastUpdated">🔄 Auto-sync: Active (Every 12 Hours)</span>
+            </div>
         </header>
+
+        <div id="statusMessage" class="status-message"></div>
 
         <div class="controls">
             <input 
@@ -287,73 +340,56 @@
             <span class="stats-text" id="jobCount">Loading jobs...</span>
         </div>
 
-        <div class="job-list" id="jobList"></div>
+        <div class="job-list" id="jobList">
+            <div class="no-results">
+                <h3>Loading jobs...</h3>
+                <p>Please wait while we load the job data from the static source</p>
+            </div>
+        </div>
 
         <footer>
-            <p>Job Board © 2024 | Displaying Swapfiets opportunities</p>
+            <p>Job Board © 2026 | Displaying Swapfiets opportunities</p>
         </footer>
     </div>
 
     <script>
-        // Embedded CSV data
-        const csvData = `Company,Job ID,Job Title,Job Type,Posting Date,Contract Type,Region,Apply Link
-Swapfiets,1156290542788384,Service & Store Associate - Brussels (Student job),Store & Field,"Apr 29, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/c1f1a56e-2905-4278-8c3f-8e4333e2ca5b/apply
-Swapfiets,1231430394181821,Service & Store Associate - Leuven (Part-time),Store & Field,"Jan 9, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/e12314d3-039d-4d1b-8182-192e84754739/apply
-Swapfiets,1281304039760253,Swapper+ (part-time) - Eindhoven,Store & Field,"May 4, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/1a28130e-eabe-403a-976e-0a25395db81a/apply
-Swapfiets,1282208784202078,Bike Hunter - Amsterdam,Store & Field,"May 18, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/128ab22c-0878-4b20-a2e0-fcb784bb4d14/apply
-Swapfiets,1331050954051023,Technician - Den Hoorn (Warehouse),Warehouse & Logistics,"Apr 20, 2026",Temporary,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/13310f5f-095e-4051-bf0d-c2fe33bacc7b/apply
-Swapfiets,1396949478538251,Fahrradmonteur*in Ausbildung - Köln,Warehouse & Logistics,"Mar 31, 2026",Temporary,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/db139694-fc9a-4cf7-8b53-8251ebc9ad37/apply
-Swapfiets,1570024550977257,Winkelmedewerker (Parttime) - Amsterdam,Store & Field,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/dc157ed0-02df-4550-9772-c57660f26d75/apply
-Swapfiets,167372646810235,Service & Store Associate (Flex) - Enschede,Store & Field,"May 20, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/a1b6ac73-7f26-46eb-81ca-c0e2e3c5bade/apply
-Swapfiets,1964666241594385,Store Associate (32 hours) - Amsterdam,Store & Field,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/196ee466-e62a-4d15-b9e4-b3b8e5d64d49/apply
-Swapfiets,2004411477962878,Service & Store Associate (Flex) - Leiden,Store & Field,"May 15, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/200cf44a-de11-47a7-9628-f7876f2bf049/apply
-Swapfiets,2262504540349692,Service & Store Associate - Gent (Student),Store & Field,"Apr 23, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/ff22cf62-5045-4034-9b69-252c20042058/apply
-Swapfiets,2568041194475995,Bike Mechanic Evening shifts (22.5 hrs) - Amsterdam (Warehouse),Warehouse & Logistics,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/2f56e804-11a9-4475-99f5-18e39d0e842c/apply
-Swapfiets,267929474898419,Service & Store Associate (Parttime) - Maastricht,Store & Field,"Apr 22, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/26afebc7-9d29-4f74-89fe-8de41ab9cfed/apply
-Swapfiets,288184793613308,Logistics Driver - Amsterdam,Warehouse & Logistics,"Mar 19, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/ce28aee8-eb18-4f7a-9f3a-b61adf330ee8/apply
-Swapfiets,2936784120352443,Shopmitarbeiter*in (Minijob) - Hamburg,Store & Field,"May 6, 2026",Permanent,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/da2c9fad-3678-4f1e-b203-52443e04ae03/apply
-Swapfiets,2967258440737865,CRM Marketeer,HQ & Customer Service,"Apr 24, 2026",1 year,SwapServices,https://swapfiets.careers.hibob.com/jobs/29b67d25-a8a4-407c-a3ab-7efb8e6d5950/apply
-Swapfiets,3459007423523433,Bike Mechanic - Amsterdam (Warehouse),Warehouse & Logistics,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/34deab59-007b-4235-b234-334611160ab0/apply
-Swapfiets,3465347958104027,Shop- & Servicemitarbeiter*in (Werkstudent*in/Teilzeit) - Frankfurt,Store & Field,"May 18, 2026",Temporary,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/fd3cdf46-ed53-479b-b58e-10a40fb27dfc/apply
-Swapfiets,3531159465715758,Logistics Operator - Den Bosch,Warehouse & Logistics,"Mar 11, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/df35dda3-1159-465a-a715-75ad8490357a/apply
-Swapfiets,3601851649585581,Logistics Operator - Den Hoorn,Warehouse & Logistics,"May 4, 2026",Temporary,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/3fa601e8-5e16-495e-b855-8bce1af583f2/apply
-Swapfiets,4403569646493928,Bike Mechanic - Den Bosch (Warehouse),Warehouse & Logistics,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/ce440a35-a696-4b64-9392-d8f912289639/apply
-Swapfiets,4426346316542886,Bike Hunter - Rotterdam,Store & Field,"Apr 29, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/44bab26e-eb3c-4e6b-bcf3-af165428a8c6/apply
-Swapfiets,4515684184148334,Store & Service Associate - Copenhagen,Store & Field,"May 15, 2026",Permanent,Swapfiets DK,https://swapfiets.careers.hibob.com/jobs/fa451568-418f-414b-8c33-4f4627f86eec/apply
-Swapfiets,4557807713941862,Vendeur Terrain et Bike Hunter (25 hours) - Paris,Store & Field,"Apr 23, 2026",Permanent,Swapfiets FR,https://swapfiets.careers.hibob.com/jobs/45578077-13c9-4b1c-8c62-ff68c66a1191/apply
-Swapfiets,4892045442491514,Technician - Mechelen (Warehouse),Warehouse & Logistics,"Apr 23, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/48f9f20a-45eb-4424-9e15-e14c35fa84c7/apply
-Swapfiets,5634303166144040,Senior Backend Engineer,HQ & Customer Service,"Apr 28, 2026",1 year,SwapServices,https://swapfiets.careers.hibob.com/jobs/56343031-6a61-4404-b0c6-ed9968e68fda/apply
-Swapfiets,5740084791317283,Customer service agent - Dutch (flex) - Amsterdam,HQ & Customer Service,"May 4, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/fa574eb0-f08c-47bd-91c3-d1728fcb374e/apply
-Swapfiets,594840857008837,Store bike Mechanic - Gent,Store & Field,"Apr 22, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/0594ef8f-efff-40f8-aa57-a0d0883a7210/apply
-Swapfiets,6162775846088436,Customer service agent - German (32 hours) - Amsterdam,HQ & Customer Service,"Apr 29, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/6162a775-e8bb-4608-84aa-ddeca3c6aaa3/apply
-Swapfiets,6479253444187989,Shopmitarbeiter*in (Werkstudent*in) - Münster,Store & Field,"Jan 9, 2026",Temporary,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/d6479a25-a34f-4ef4-b18d-79bf89b4b6e9/apply
-Swapfiets,689415546580664,Shopmitarbeiter*in (Minijob) - Düsseldorf,Store & Field,"Jan 9, 2026",Temporary,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/af0ce6f8-9bcd-4e1f-a5c5-dd465806d6a4/apply
-Swapfiets,691644299946082,Servicefahrer*in / Service Driver Berlin (Teilzeit 32h),Store & Field,"May 6, 2026",1 year,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/069c1d6e-cefd-4d42-999c-46d0f82a292f/apply
-Swapfiets,7273868443937697,Logistics Operator - Amsterdam,Warehouse & Logistics,"Jan 9, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/7ef273ed-868c-4b43-93af-ecffbb769a75/apply
-Swapfiets,7963318364193701,Service & Winkelmedewerker (Parttime) - Breda,Store & Field,"May 20, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/79633d18-ab36-4ed1-93e7-012a4bbcbe39/apply
-Swapfiets,813627429484911,Logistics Operator - Den Bosch,Warehouse & Logistics,"Apr 24, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/081fd362-c7ca-4294-8db4-d9119279c7cf/apply
-Swapfiets,8226578749188801,Technician - Amsterdam (Warehouse),Warehouse & Logistics,"Feb 6, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/f8226e5e-787f-4a91-8ff8-e8f0d133e8eb/apply
-Swapfiets,824017049553810,Customer service agent - Danish (full-time) - Amsterdam,HQ & Customer Service,"May 13, 2026",Temporary,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/a082b40d-1d70-49b5-bc5e-3f810e6aa657/apply
-Swapfiets,830498407932654,Service & Store Associate (Flex) - Leeuwarden,Store & Field,"May 15, 2026",7-month contract,Swapfiets NL,https://swapfiets.careers.hibob.com/jobs/db08a304-b9f8-4e07-93fe-a2654aee033d/apply
-Swapfiets,8339893368437869,Fahrradmonteur*in (Vollzeit) - Berlin,Warehouse & Logistics,"Apr 29, 2026",Temporary,Swapfiets DE,https://swapfiets.careers.hibob.com/jobs/83d39893-36c8-437e-8feb-697aac6c5b80/apply
-Swapfiets,9221863517471954,Shop- & Servicemitarbeiter*in (Werkstudent*in/Teilzeit) - Wien,Store & Field,"Apr 30, 2026",Permanent,Swapfiets AT,https://swapfiets.careers.hibob.com/jobs/922b1863-51b7-4f7e-a195-47f642231613/apply
-Swapfiets,9346304455323904,Service & Store Associate - Leuven (Student),Store & Field,"Apr 23, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/bd9346c3-cd0a-44db-ab5f-5f323905e781/apply
-Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store & Field,"Apr 13, 2026",Temporary,Swapfiets BE,https://swapfiets.careers.hibob.com/jobs/a955eedc-a646-43e6-a5e9-97c965199374/apply`;
-
         let allJobs = [];
         let filteredJobs = [];
+        
+        // TARGET ASSET PATH: Points to the static tracking file inside your repository
+        const STATIC_CSV_FILE = 'scraped_jobs_list.csv';
 
-        // Parse CSV data on load
-        function loadData() {
-            parseCSV(csvData);
+        // Fetch CSV data directly from your static repository root
+        async function loadData() {
+            try {
+                const response = await fetch(STATIC_CSV_FILE);
+                if (!response.ok) {
+                    throw new Error(`File lookup failed with status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                parseCSV(csvText);
+            } catch (error) {
+                console.error('Error loading static CSV database:', error);
+                showStatus('Failed to locate or load scraped_jobs_list.csv. Verify that the file exists in the repository root branch.', 'error');
+            }
         }
 
-        // Parse CSV data
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            statusEl.style.display = 'flex';
+        }
+
+        // Parse CSV data cleanly
         function parseCSV(csvText) {
-            const lines = csvText.split('\n').filter(line => line.trim());
+            // Split entries by lines, ignoring blank filler lines
+            const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
             
             allJobs = [];
             
+            // Loop indices starting from 1 to avoid treating header label maps as job entries
             for (let i = 1; i < lines.length; i++) {
                 const values = parseCSVLine(lines[i]);
                 
@@ -377,7 +413,7 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             displayJobs();
         }
 
-        // Parse CSV line handling quoted fields
+        // Parse individual CSV line values with quote isolation logic
         function parseCSVLine(line) {
             const result = [];
             let current = '';
@@ -400,13 +436,14 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             return result;
         }
 
-        // Populate filter dropdowns
+        // Populate unique filter dropdown selections
         function populateFilters() {
-            const companies = [...new Set(allJobs.map(j => j.region))].sort();
-            const locations = [...new Set(allJobs.map(j => extractLocation(j.title)))].filter(l => l).sort();
-            const types = [...new Set(allJobs.map(j => j.type))].sort();
+            const companies = [...new Set(allJobs.map(j => j.region))].filter(Boolean).sort();
+            const locations = [...new Set(allJobs.map(j => extractLocation(j.title)))].filter(Boolean).sort();
+            const types = [...new Set(allJobs.map(j => j.type))].filter(Boolean).sort();
             
             const companyFilter = document.getElementById('companyFilter');
+            companyFilter.innerHTML = '<option value="">All Companies</option>';
             companies.forEach(company => {
                 const option = document.createElement('option');
                 option.value = company;
@@ -415,6 +452,7 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             });
             
             const locationFilter = document.getElementById('locationFilter');
+            locationFilter.innerHTML = '<option value="">All Locations</option>';
             locations.forEach(location => {
                 const option = document.createElement('option');
                 option.value = location;
@@ -423,6 +461,7 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             });
 
             const typeFilter = document.getElementById('typeFilter');
+            typeFilter.innerHTML = '<option value="">All Types</option>';
             types.forEach(type => {
                 const option = document.createElement('option');
                 option.value = type;
@@ -431,13 +470,13 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             });
         }
 
-        // Extract location from title
+        // Clean location capture strategy via regex looking for dash patterns
         function extractLocation(title) {
-            const match = title.match(/- ([A-Za-zÀ-ÿ\s]+?)(?:\s*\(|$)/);
+            const match = title.match(/- ([A-Za-zÀ-ÿ\s\*\/\+]+?)(?:\s*\(|$)/);
             return match ? match[1].trim() : '';
         }
 
-        // Display jobs
+        // Display targeted listings
         function displayJobs() {
             const jobList = document.getElementById('jobList');
             const jobCount = document.getElementById('jobCount');
@@ -471,7 +510,7 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
                         <div class="job-details">
                             <div class="detail-item">
                                 <span class="detail-label">📍 Location:</span>
-                                <span>${location || 'See job posting'}</span>
+                                <span>${location || 'See job details'}</span>
                             </div>
                             <div class="detail-item">
                                 <span class="detail-label">📄 Contract:</span>
@@ -493,7 +532,7 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             }).join('');
         }
 
-        // Filter jobs
+        // Search engine filter mechanics
         function filterJobs() {
             const searchTerm = document.getElementById('searchBar').value.toLowerCase();
             const companyFilter = document.getElementById('companyFilter').value;
@@ -517,13 +556,13 @@ Swapfiets,9556464365997964,Service & Store Associate - Antwerp (40 hours),Store 
             displayJobs();
         }
 
-        // Event listeners
+        // Initialize event processing loops
         document.getElementById('searchBar').addEventListener('input', filterJobs);
         document.getElementById('companyFilter').addEventListener('change', filterJobs);
         document.getElementById('locationFilter').addEventListener('change', filterJobs);
         document.getElementById('typeFilter').addEventListener('change', filterJobs);
 
-        // Load data on page load
+        // Fetch entries on script DOM verification context trigger
         window.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>
