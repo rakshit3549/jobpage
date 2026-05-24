@@ -37,7 +37,7 @@ jobs:
 
     # 5. Run your pipeline to extract dynamic job sheets and generate 'scraped_jobs_list.csv'
     - name: Execute Scraper Script
-      run: python scraper_pipeline.py
+      run: python scraper.py
 
     # 6. Check if changes exist, compile and commit them back into the main branch
     - name: Commit and Push Changes
