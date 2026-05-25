@@ -2,44 +2,44 @@ name: 12-Hour Automated Job Scraper
 
 on:
   schedule:
-    # Runs exactly every 12 hours (00:00 and 12:00 UTC)
+    # Runs automatically every 12 hours (at 00:00 and 12:00 UTC)
     - cron: '0 */12 * * *'
-  workflow_dispatch: # Allows you to manually trigger the script from GitHub UI anytime
+  workflow_dispatch: # Allows you to manually trigger the script from the GitHub Actions tab anytime
 
 permissions:
-  contents: write # Allows the automated runner to save updates back to your repository
+  contents: write # Grants the workflow permission to write the updated CSV file back to your repo
 
 jobs:
   scrape-and-update:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Download a copy of your repository to the cloud runner
+    # 1. Download a copy of your repository files to the runner environment
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Deploy an isolated Python Environment
+    # 2. Deploy an isolated Python Environment on the runner
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.9'
         cache: 'pip'
 
-    # 3. Install required web libraries
+    # 3. Install required web scraper libraries from requirements.txt
     - name: Install System Dependencies
       run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 4. Pull and configure the headless Chromium binaries required by Playwright
+    # 4. Install the Chromium browser core needed by Playwright
     - name: Install Playwright Chromium Core
-      run: playwright install chromium
+      run: npx playwright install chromium
 
-    # 5. Run your pipeline to extract dynamic job sheets and generate 'scraped_jobs_list.csv'
+    # 5. Run your unified Python pipeline to fetch IDs, scrape details, and rebuild the CSV
     - name: Execute Scraper Script
-      run: python scraper.py
+      run: python scraper_pipeline.py
 
-    # 6. Check if changes exist, compile and commit them back into the main branch
+    # 6. Detect modifications to 'scraped_jobs_list.csv', commit, and push back online
     - name: Commit and Push Changes
       run: |
         git config --global user.name "github-actions[bot]"
@@ -49,7 +49,8 @@ jobs:
         if [ -n "$(git status --porcelain scraped_jobs_list.csv)" ]; then
           git add scraped_jobs_list.csv
           git commit -m "Automated Refresh: Syncing fresh data [Skip CI]"
-          git push
+          git push origin main
         else
-          print "No fresh changes identified since last cycle."
+          # FIX: Replaced broken 'print' with native Linux shell 'echo'
+          echo "No fresh changes identified since last cycle."
         fi
