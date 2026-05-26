@@ -3,7 +3,7 @@ name: 12-Hour Automated Job Scraper
 on:
   schedule:
     # Runs automatically every 12 hours (at 00:00 and 12:00 UTC)
-    - cron: '0/5 * * * *'
+    - cron: '0 */12 * * *'
   workflow_dispatch: # Allows you to manually trigger the script from the GitHub Actions tab anytime
 
 permissions:
