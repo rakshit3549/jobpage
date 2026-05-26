@@ -3,7 +3,7 @@ name: 12-Hour Automated Job Scraper
 on:
   schedule:
     # Runs automatically every 12 hours (at 00:00 and 12:00 UTC)
-    - cron: '0 */12 * * *'
+    - cron: '0/5 * * * *'
   workflow_dispatch: # Allows you to manually trigger the script from the GitHub Actions tab anytime
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
 
     # 5. Run your unified Python pipeline to fetch IDs, scrape details, and rebuild the CSV
     - name: Execute Scraper Script
-      run: python scraper_pipeline.py
+      run: python scraper.py
 
     # 6. Detect modifications to 'scraped_jobs_list.csv', commit, and push back online
     - name: Commit and Push Changes
