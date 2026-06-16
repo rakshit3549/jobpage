@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Download a copy of your repository files to the runner environment
+    # 1. Download a copy of your repository files to the runner environment (Updated to v5)
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
-    # 2. Deploy an isolated Python Environment on the runner
+    # 2. Deploy an isolated Python Environment on the runner (Updated to v6)
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.9'
         cache: 'pip'
@@ -31,13 +31,31 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 4. Install the Chromium browser core needed by Playwright
-    - name: Install Playwright Chromium Core
-      run: npx playwright install chromium
+    # 4. FIX: Install Playwright and its exact browser binaries using direct shell invocation
+    - name: Install Playwright Browsers and System Dependencies
+      run: |
+        pip install playwright
+        playwright install --with-deps chromium
 
-    # 5. Run your unified Python pipeline to fetch IDs, scrape details, and rebuild the CSV
+    # 5. FIX: Find your scraper script dynamically anywhere in the repo and run it
     - name: Execute Scraper Script
-      run: python scraper.py
+      run: |
+        echo "🔍 Searching for your script..."
+        # Locate your python script anywhere in the repository directory tree
+        SCRIPT_PATH=$(find . -name "scraper.py" -o -name "scraper_pipeline.py" -o -name "scrip_3.py" | head -n 1)
+        
+        if [ -n "$SCRIPT_PATH" ]; then
+          echo "✅ Found script at: $SCRIPT_PATH"
+          SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+          SCRIPT_NAME=$(basename "$SCRIPT_PATH")
+          cd "$SCRIPT_DIR"
+          python "$SCRIPT_NAME"
+        else
+          echo "❌ CRITICAL ERROR: Could not find your python scraper script anywhere in this repository!"
+          echo "Showing repository directory contents for debugging:"
+          ls -R
+          exit 1
+        fi
 
     # 6. Detect modifications to 'scraped_jobs_list.csv', commit, and push back online
     - name: Commit and Push Changes
@@ -45,12 +63,19 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
+        # Pull any CSV generated inside nested subdirectories to the root level
+        find . -name "scraped_jobs_list.csv" -o -name "scraped_jobs.csv" | while read -r csv_path; do
+          if [ "$csv_path" != "./scraped_jobs_list.csv" ]; then
+            echo "Moving $csv_path to root root level..."
+            cp "$csv_path" ./scraped_jobs_list.csv
+          fi
+        done
+        
         # Check if the CSV data has actual modifications before forcing a save point
-        if [ -n "$(git status --porcelain scraped_jobs_list.csv)" ]; then
+        if [ -f scraped_jobs_list.csv ] && [ -n "$(git status --porcelain scraped_jobs_list.csv)" ]; then
           git add scraped_jobs_list.csv
           git commit -m "Automated Refresh: Syncing fresh data [Skip CI]"
           git push origin main
         else
-          # FIX: Replaced broken 'print' with native Linux shell 'echo'
           echo "No fresh changes identified since last cycle."
         fi
